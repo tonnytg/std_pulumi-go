@@ -1,0 +1,3 @@
+name: bucket-test
+runtime: go
+description: Test with Go and Pulumi
