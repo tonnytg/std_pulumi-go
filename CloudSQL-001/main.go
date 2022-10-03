@@ -12,8 +12,16 @@ import (
 )
 
 var (
-	PROJECT     = os.Getenv("GOOGLE_CLOUD_PROJECT")
-	BUCKET_NAME = os.Getenv("BUCKET_NAME")
+	PROJECT           = os.Getenv("GOOGLE_CLOUD_PROJECT")
+	BUCKET_NAME       = os.Getenv("BUCKET_NAME")
+	BUCKET_FILE       = "CloudSQL-001/data.sql"
+	INSTANCE_NAME     = "my-instance"
+	DATABASE_NAME     = "guestbook"
+	DATABASE_TIER     = "db-n1-standard-1"
+	DATABASE_USER     = "tonnytg"
+	DATABASE_PASSWORD = os.Getenv("DATABASE_PASSWORD")
+	DATABASE_HOST     = os.Getenv("DATABASE_HOST")
+	DATABASE_TYPE     = "POSTGRES_14"
 )
 
 func main() {
@@ -30,26 +38,26 @@ func main() {
 		// Create Bucket Object with SQL script
 		_, err = storage.NewBucketObject(ctx, "sql-object", &storage.BucketObjectArgs{
 			Bucket: bucket.Name,
-			Source: pulumi.NewFileAsset("CloudSQL-001/data.sql"),
+			Source: pulumi.NewFileAsset(BUCKET_FILE),
 		})
 
-		instance, err := psql.NewDatabaseInstance(ctx, "myinstance1", &psql.DatabaseInstanceArgs{
+		instance, err := psql.NewDatabaseInstance(ctx, INSTANCE_NAME, &psql.DatabaseInstanceArgs{
 			Region:          pulumi.String("us-central1"),
-			DatabaseVersion: pulumi.String("POSTGRES_14"),
+			DatabaseVersion: pulumi.String(DATABASE_TYPE),
 			Settings: &psql.DatabaseInstanceSettingsArgs{
-				Tier: pulumi.String("db-f1-micro"),
+				Tier: pulumi.String(DATABASE_TIER),
 			},
 			DeletionProtection: pulumi.Bool(false),
-			Name:               pulumi.String("myinstance1"),
-			RootPassword:       pulumi.String("mysecretpassword"),
+			Name:               pulumi.String(INSTANCE_NAME),
+			RootPassword:       pulumi.String(DATABASE_PASSWORD),
 		})
 		if err != nil {
 			return err
 		}
 
-		database, err := psql.NewDatabase(ctx, "mydatabase1", &psql.DatabaseArgs{
+		database, err := psql.NewDatabase(ctx, DATABASE_NAME, &psql.DatabaseArgs{
 			Instance: instance.Name,
-			Name:     pulumi.String("guestbook"),
+			Name:     pulumi.String(DATABASE_NAME),
 			Project:  pulumi.String(PROJECT),
 		})
 		if err != nil {
@@ -62,7 +70,7 @@ func main() {
 		return nil
 	})
 
-	connStr := "postgres://tonnytg:mysecretpassword@34.71.191.38"
+	connStr := fmt.Sprintf("postgres://%s:%s@%s", DATABASE_USER, DATABASE_PASSWORD, DATABASE_HOST)
 	db, err := sql.Open(
 		"postgres", connStr,
 	)
